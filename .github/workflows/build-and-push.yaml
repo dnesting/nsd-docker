@@ -1,0 +1,118 @@
+name: Build & Publish NSD Image
+
+on:
+  # run every day (so we pick up new releases quickly)
+  schedule:
+    - cron: '14 3 * * *'
+  workflow_dispatch:        # allow manual runs
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read            # to fetch workflow files
+  id-token: write           # needed for keyless Cosign signing
+  packages: write           # for DockerHub via login-action
+
+env:
+  DOCKER_REPO: dnesting/nsd
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out this repo (for Dockerfile)
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+
+    - name: Get commit info
+      id: gitmeta
+      run: |
+        SHORT_SHA=$(git rev-parse --short=7 HEAD)
+        echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
+
+    - name: Get version info
+      id: get_latest
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "${{ github.event_name }}" = "push" ]; then
+          VERSION="dev"
+          BRANCH="master"
+        else
+          BRANCH=$(curl -s https://api.github.com/repos/NLnetLabs/nsd/releases/latest |
+            jq -r .tag_name |
+            grep -Ee '^NSD_([0-9]+)_([0-9]+)_([0-9]+)_REL$')
+          [ -z "$BRANCH" ] && echo "Error: invalid upstream release tag" && exit 1
+          VERSION=$(echo "$BRANCH" | sed -E 's/^NSD_([0-9]+)_([0-9]+)_([0-9]+)_REL$/\1.\2.\3/')
+        fi
+    
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+        echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+    - name: Build full image tag with commit metadata
+      id: tag
+      run: |
+        SHORT_SHA=${{ steps.gitmeta.outputs.short_sha }}
+        DIRTY=${{ steps.gitmeta.outputs.dirty }}
+        VERSION=${{ steps.get_latest.outputs.version }}
+    
+        FULL_TAG="${VERSION}-${SHORT_SHA}${DIRTY}"
+        echo "full_tag=$FULL_TAG" >> "$GITHUB_OUTPUT"
+    
+    - name: Check if image tag already exists on Docker Hub
+      id: tag_check
+      run: |
+        IMAGE=${{ env.DOCKER_REPO }}
+        TAG=${{ steps.tag.outputs.full_tag }}
+        STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+          https://hub.docker.com/v2/repositories/$IMAGE/tags/$TAG)
+    
+        if [ "$STATUS" = "200" ]; then
+          echo "Image tag already exists. Skipping build."
+          echo "skip_build=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "Image tag does not exist. Proceeding."
+          echo "skip_build=false" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Set up QEMU (for multi-arch) & Buildx
+      if: steps.tag_check.outputs.skip_build == 'false'
+      uses: docker/setup-qemu-action@v3
+    - uses: docker/setup-buildx-action@v2
+      if: steps.tag_check.outputs.skip_build == 'false'
+
+    - name: Log in to Docker Hub
+      if: steps.tag_check.outputs.skip_build == 'false'
+      uses: docker/login-action@v2
+      with:
+        registry: docker.io
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build and push image
+      if: steps.tag_check.outputs.skip_build == 'false'
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        file: Dockerfile
+        platforms: linux/amd64,linux/arm64,linux/arm/v7
+        push: true
+        build-args: |
+          TAG=${{ steps.get_latest.outputs.branch }}
+        tags: |
+          ${{ env.DOCKER_REPO }}:${{ steps.tag.outputs.full_tag }}
+          ${{ env.DOCKER_REPO }}:latest
+
+    - name: Install Cosign
+      if: steps.tag_check.outputs.skip_build == 'false'
+      uses: sigstore/cosign-installer@v3.8.1
+      with:
+        cosign-release: 'v2.4.3'
+
+    - name: Sign image keylessly
+      if: steps.tag_check.outputs.skip_build == 'false'
+      run: |
+        cosign sign ${{ env.DOCKER_REPO }}:${{ steps.tag.outputs.full_tag }}
+
+
