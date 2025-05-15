@@ -86,6 +86,7 @@ jobs:
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
     - name: Build and push image
+      id: build
       if: steps.tag_check.outputs.skip_build == 'false'
       uses: docker/build-push-action@v6
       with:
@@ -111,6 +112,6 @@ jobs:
     - name: Sign image keylessly
       if: steps.tag_check.outputs.skip_build == 'false'
       run: |
-        cosign sign ${{ env.DOCKER_REPO }}:${{ steps.tag.outputs.full_tag }}
+        cosign sign --yes ${{ env.DOCKER_REPO }}:${{ steps.build.outputs.imageid }}
 
 

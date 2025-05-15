@@ -3,9 +3,10 @@
 ![Docker Image Version (tag)](https://img.shields.io/docker/v/dnesting/nsd/latest)
 
 
-This creates the `dnesting/nsd` Docker image for the 
+This creates the [`dnesting/nsd`](https://hub.docker.com/r/dnesting/nsd) Docker image for the 
 [NSD](https://www.nlnetlabs.nl/projects/nsd/about/) DNS server.
 The `:latest` tag should be automatically built from the latest release of NSD.
+The image is being built for `linux/amd64`, `linux/arm64`, and `linux/arm/v7` architectures.
 
 See [nsd.conf](nsd.conf) for the "default" configuration file used by this image.
 You can apply your own configuration on top of this by mounting a volume to `/etc/nsd/` in the container
@@ -25,3 +26,6 @@ It also enables Prometheus metrics on port 9153.
 I've also included a [kubernetes/pod-privileged.yaml](kubernetes/pod-privileged.yaml)
 to show how to run NSD on port 53.
 
+## Support
+
+This isn't associated with the NSD project and I don't plan to provide much support for it.
