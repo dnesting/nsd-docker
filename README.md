@@ -1,5 +1,8 @@
 # nsd-docker
 
+![Docker Image Version (tag)](https://img.shields.io/docker/v/dnesting/nsd/latest)
+
+
 This creates the `dnesting/nsd` Docker image for the 
 [NSD](https://www.nlnetlabs.nl/projects/nsd/about/) DNS server.
 The `:latest` tag should be automatically built from the latest release of NSD.

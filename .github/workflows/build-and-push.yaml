@@ -64,10 +64,10 @@ jobs:
           https://hub.docker.com/v2/repositories/$IMAGE/tags/$TAG)
     
         if [ "$STATUS" = "200" ]; then
-          echo "Image tag already exists. Skipping build."
+          echo "Image ${IMAGE}:${TAG} already exists. Skipping build."
           echo "skip_build=true" >> "$GITHUB_OUTPUT"
         else
-          echo "Image tag does not exist. Proceeding."
+          echo "Image ${IMAGE}:${TAG} does not exist. Proceeding."
           echo "skip_build=false" >> "$GITHUB_OUTPUT"
         fi
 
@@ -97,7 +97,10 @@ jobs:
           TAG=${{ steps.get_latest.outputs.branch }}
         tags: |
           ${{ env.DOCKER_REPO }}:${{ steps.tag.outputs.full_tag }}
+          ${{ env.DOCKER_REPO }}:${{ steps.get_latest.outputs.version }}
           ${{ env.DOCKER_REPO }}:latest
+        cache-from: type=registry,ref=${{ env.DOCKER_REPO }}:buildcache
+        cache-to: type=registry,ref=${{ env.DOCKER_REPO }}:buildcache,mode=max
 
     - name: Install Cosign
       if: steps.tag_check.outputs.skip_build == 'false'
