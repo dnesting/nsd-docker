@@ -71,6 +71,13 @@ jobs:
           echo "skip_build=false" >> "$GITHUB_OUTPUT"
         fi
 
+    - name: Set up Docker metadata
+      if: steps.tag_check.outputs.skip_build == 'false'
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.DOCKER_REPO }}
+
     - name: Set up QEMU (for multi-arch) & Buildx
       if: steps.tag_check.outputs.skip_build == 'false'
       uses: docker/setup-qemu-action@v3
@@ -102,6 +109,7 @@ jobs:
           ${{ env.DOCKER_REPO }}:latest
         cache-from: type=registry,ref=${{ env.DOCKER_REPO }}:buildcache
         cache-to: type=registry,ref=${{ env.DOCKER_REPO }}:buildcache,mode=max
+        annotations: ${{ steps.meta.outputs.annotations }}
 
     - name: Install Cosign
       if: steps.tag_check.outputs.skip_build == 'false'
