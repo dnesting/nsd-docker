@@ -115,7 +115,7 @@ jobs:
       if: steps.tag_check.outputs.skip_build == 'false'
       uses: sigstore/cosign-installer@v3.8.1
       with:
-        cosign-release: 'v2.4.3'
+        cosign-release: 'v2.5.0'
 
     - name: Sign image
       if: steps.tag_check.outputs.skip_build == 'false'
