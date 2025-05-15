@@ -36,16 +36,11 @@ jobs:
     - name: Get version info
       id: get_latest
       run: |
-        if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "${{ github.event_name }}" = "push" ]; then
-          VERSION="dev"
-          BRANCH="master"
-        else
-          BRANCH=$(curl -s https://api.github.com/repos/NLnetLabs/nsd/releases/latest |
-            jq -r .tag_name |
-            grep -Ee '^NSD_([0-9]+)_([0-9]+)_([0-9]+)_REL$')
-          [ -z "$BRANCH" ] && echo "Error: invalid upstream release tag" && exit 1
-          VERSION=$(echo "$BRANCH" | sed -E 's/^NSD_([0-9]+)_([0-9]+)_([0-9]+)_REL$/\1.\2.\3/')
-        fi
+        BRANCH=$(curl -s https://api.github.com/repos/NLnetLabs/nsd/releases/latest |
+          jq -r .tag_name |
+          grep -Ee '^NSD_([0-9]+)_([0-9]+)_([0-9]+)_REL$')
+        [ -z "$BRANCH" ] && echo "Error: invalid upstream release tag" && exit 1
+        VERSION=$(echo "$BRANCH" | sed -E 's/^NSD_([0-9]+)_([0-9]+)_([0-9]+)_REL$/\1.\2.\3/')
     
         echo "version=$VERSION" >> "$GITHUB_OUTPUT"
         echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
