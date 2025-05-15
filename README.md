@@ -26,6 +26,15 @@ It also enables Prometheus metrics on port 9153.
 I've also included a [kubernetes/pod-privileged.yaml](kubernetes/pod-privileged.yaml)
 to show how to run NSD on port 53.
 
+## Cosign Verification
+
+```
+cosign verify \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  --certificate-identity-regexp '^https://github.com/dnesting/nsd-docker/.*$' \
+  dnesting/nsd:latest
+```
+
 ## Support
 
 This isn't associated with the NSD project and I don't plan to provide much support for it.
